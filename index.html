@@ -1,0 +1,183 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Calculadora de Fechas - Dorado & Asoc.</title>
+  <style>
+    body {
+      font-family: 'Montserrat', sans-serif;
+      background: #fdf5e6;
+      color: #222;
+      margin: 0;
+      padding: 2rem;
+    }
+    .container {
+      max-width: 550px;
+      margin: 0 auto;
+      padding: 2rem;
+      border-radius: 12px;
+      border: 1px solid #e0e0e0;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      background: #fff;
+    }
+    h1 {
+      font-size: 1.5rem;
+      margin-bottom: 1.5rem;
+      text-align: center;
+    }
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+    }
+    input, select, button {
+      width: 100%;
+      padding: 0.75rem;
+      margin-bottom: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+    button {
+      background-color: #bfa046;
+      color: #fff;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background-color: #a88f3e;
+    }
+    .result {
+      margin-top: 1.5rem;
+      padding: 1rem;
+      background: #f9f9f9;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+    }
+    .grace-day {
+      margin-top: 1rem;
+      padding: 1rem;
+      background: #eef6ff;
+      border-left: 4px solid #4285f4;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Calculadora de Fechas</h1>
+
+    <!-- Sección 1: Sumar días -->
+    <label for="startDate">Fecha inicial:</label>
+    <input type="date" id="startDate" />
+
+    <label for="days">Cantidad de días:</label>
+    <input type="number" id="days" min="1" />
+
+    <label for="type">Tipo de cómputo:</label>
+    <select id="type">
+      <option value="corridos">Días Corridos</option>
+      <option value="habiles">Días Hábiles</option>
+    </select>
+
+    <button onclick="calcularFecha()">Obtener fecha</button>
+
+    <div id="resultado" class="result" style="display:none;"></div>
+    <div id="gracia" class="grace-day" style="display:none;"></div>
+
+    <hr style="margin:2rem 0; border: none; border-top: 1px solid #ccc;" />
+
+    <!-- Sección 2: Diferencia entre fechas -->
+    <label for="desde">Desde (fecha inicial):</label>
+    <input type="date" id="desde" />
+
+    <label for="hasta">Hasta (fecha final):</label>
+    <input type="date" id="hasta" />
+
+    <button onclick="calcularDiferencia()">Calcular diferencia</button>
+
+    <div id="diferencia" class="result" style="display:none;"></div>
+  </div>
+
+  <script>
+    const feriados = [
+      "2025-01-01", "2025-02-03", "2025-02-04", "2025-03-24",
+      "2025-04-02", "2025-04-17", "2025-04-18", "2025-05-01",
+      "2025-05-25", "2025-06-20", "2025-06-21", "2025-07-09",
+      "2025-08-18", "2025-10-11", "2025-10-12", "2025-12-08", "2025-12-25"
+    ];
+
+    function esDiaHabil(date) {
+      const day = date.getDay();
+      const iso = date.toISOString().split("T")[0];
+      return day !== 0 && day !== 6 && !feriados.includes(iso);
+    }
+
+    function calcularFecha() {
+      const startInput = document.getElementById("startDate").value;
+      const days = parseInt(document.getElementById("days").value);
+      const type = document.getElementById("type").value;
+      const resultDiv = document.getElementById("resultado");
+      const graceDiv = document.getElementById("gracia");
+
+      if (!startInput || isNaN(days) || days <= 0) {
+        alert("Completá todos los campos correctamente.");
+        return;
+      }
+
+      let count = 0;
+      let fecha = new Date(startInput);
+      fecha.setDate(fecha.getDate() + 1);
+
+      while (count < days) {
+        if (type === "corridos") {
+          count++;
+        } else {
+          if (esDiaHabil(fecha)) count++;
+        }
+        if (count < days) fecha.setDate(fecha.getDate() + 1);
+      }
+
+      resultDiv.style.display = "block";
+      resultDiv.innerHTML = `<strong>Fecha final:</strong> ${fecha.toLocaleDateString('es-AR')}`;
+
+      let gracia = new Date(fecha);
+      do {
+        gracia.setDate(gracia.getDate() + 1);
+      } while (!esDiaHabil(gracia));
+
+      graceDiv.style.display = "block";
+      graceDiv.innerHTML = `<strong>Día de gracia:</strong> ${gracia.toLocaleDateString('es-AR')}`;
+    }
+
+    function calcularDiferencia() {
+      const desde = new Date(document.getElementById("desde").value);
+      const hasta = new Date(document.getElementById("hasta").value);
+      const diffDiv = document.getElementById("diferencia");
+
+      if (isNaN(desde.getTime()) || isNaN(hasta.getTime()) || hasta < desde) {
+        alert("Seleccioná fechas válidas (la final debe ser posterior a la inicial).");
+        return;
+      }
+
+      const diffCorridos = Math.ceil((hasta - desde) / (1000 * 60 * 60 * 24));
+
+      let current = new Date(desde);
+      let habiles = 0;
+      while (current <= hasta) {
+        if (esDiaHabil(current)) habiles++;
+        current.setDate(current.getDate() + 1);
+      }
+
+      diffDiv.style.display = "block";
+      diffDiv.innerHTML = `
+        <strong>Días corridos:</strong> ${diffCorridos}<br>
+        <strong>Días hábiles:</strong> ${habiles}
+      `;
+    }
+  </script>
+</body>
+</html>
