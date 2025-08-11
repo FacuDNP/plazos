@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -126,74 +125,101 @@ const feriados = [
   "2025-12-25"  // Navidad
 ];
 
-    function esDiaHabil(date) {
-      const day = date.getDay();
-      const iso = date.toISOString().split("T")[0];
-      return day !== 0 && day !== 6 && !feriados.includes(iso);
+// --- Utilidades en horario local para evitar desfases por UTC ---
+function parseLocalDate(yyyyMmDd) {
+  const [y, m, d] = yyyyMmDd.split("-").map(Number);
+  return new Date(y, m - 1, d); // 00:00 hora local
+}
+function isoLocal(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function esDiaHabil(date) {
+  const day = date.getDay();
+  const iso = isoLocal(date);
+  return day !== 0 && day !== 6 && !feriados.includes(iso);
+}
+
+function calcularFecha() {
+  const startInput = document.getElementById("startDate").value;
+  const days = parseInt(document.getElementById("days").value);
+  const type = document.getElementById("type").value;
+  const resultDiv = document.getElementById("resultado");
+  const graceDiv = document.getElementById("gracia");
+
+  if (!startInput || isNaN(days) || days <= 0) {
+    alert("Completá todos los campos correctamente.");
+    return;
+  }
+
+  let count = 0;
+  let fecha = parseLocalDate(startInput);
+
+  // No se cuenta el día inicial: empezar desde el día siguiente
+  fecha.setDate(fecha.getDate() + 1);
+
+  while (count < days) {
+    if (type === "corridos") {
+      count++;
+    } else {
+      if (esDiaHabil(fecha)) count++;
     }
+    if (count < days) fecha.setDate(fecha.getDate() + 1);
+  }
 
-    function calcularFecha() {
-      const startInput = document.getElementById("startDate").value;
-      const days = parseInt(document.getElementById("days").value);
-      const type = document.getElementById("type").value;
-      const resultDiv = document.getElementById("resultado");
-      const graceDiv = document.getElementById("gracia");
+  resultDiv.style.display = "block";
+  resultDiv.innerHTML = `<strong>Fecha final:</strong> ${fecha.toLocaleDateString('es-AR')}`;
 
-      if (!startInput || isNaN(days) || days <= 0) {
-        alert("Completá todos los campos correctamente.");
-        return;
-      }
+  let gracia = new Date(fecha);
+  do {
+    gracia.setDate(gracia.getDate() + 1);
+  } while (!esDiaHabil(gracia));
 
-      let count = 0;
-      let fecha = new Date(startInput);
-      fecha.setDate(fecha.getDate() + 1);
+  graceDiv.style.display = "block";
+  graceDiv.innerHTML = `<strong>Día de gracia:</strong> ${gracia.toLocaleDateString('es-AR')}`;
+}
 
-      while (count < days) {
-        if (type === "corridos") {
-          count++;
-        } else {
-          if (esDiaHabil(fecha)) count++;
-        }
-        if (count < days) fecha.setDate(fecha.getDate() + 1);
-      }
+function calcularDiferencia() {
+  const desdeVal = document.getElementById("desde").value;
+  const hastaVal = document.getElementById("hasta").value;
+  const diffDiv = document.getElementById("diferencia");
 
-      resultDiv.style.display = "block";
-      resultDiv.innerHTML = `<strong>Fecha final:</strong> ${fecha.toLocaleDateString('es-AR')}`;
+  if (!desdeVal || !hastaVal) {
+    alert("Seleccioná fechas válidas (la final debe ser posterior a la inicial).");
+    return;
+  }
 
-      let gracia = new Date(fecha);
-      do {
-        gracia.setDate(gracia.getDate() + 1);
-      } while (!esDiaHabil(gracia));
+  const desde = parseLocalDate(desdeVal);
+  const hasta = parseLocalDate(hastaVal);
 
-      graceDiv.style.display = "block";
-      graceDiv.innerHTML = `<strong>Día de gracia:</strong> ${gracia.toLocaleDateString('es-AR')}`;
-    }
+  if (hasta < desde) {
+    alert("Seleccioná fechas válidas (la final debe ser posterior a la inicial).");
+    return;
+  }
 
-    function calcularDiferencia() {
-      const desde = new Date(document.getElementById("desde").value);
-      const hasta = new Date(document.getElementById("hasta").value);
-      const diffDiv = document.getElementById("diferencia");
+  const MS_DIA = 24 * 60 * 60 * 1000;
 
-      if (isNaN(desde.getTime()) || isNaN(hasta.getTime()) || hasta < desde) {
-        alert("Seleccioná fechas válidas (la final debe ser posterior a la inicial).");
-        return;
-      }
+  // Días corridos SIN contar el día inicial
+  const diffCorridos = Math.round((hasta - desde) / MS_DIA);
 
-      const diffCorridos = Math.ceil((hasta - desde) / (1000 * 60 * 60 * 24));
+  // Días hábiles desde el día siguiente al inicial hasta la fecha final (inclusive)
+  let current = new Date(desde);
+  current.setDate(current.getDate() + 1);
+  let habiles = 0;
+  while (current <= hasta) {
+    if (esDiaHabil(current)) habiles++;
+    current.setDate(current.getDate() + 1);
+  }
 
-      let current = new Date(desde);
-      let habiles = 0;
-      while (current <= hasta) {
-        if (esDiaHabil(current)) habiles++;
-        current.setDate(current.getDate() + 1);
-      }
-
-      diffDiv.style.display = "block";
-      diffDiv.innerHTML = `
-        <strong>Días corridos:</strong> ${diffCorridos}<br>
-        <strong>Días hábiles:</strong> ${habiles}
-      `;
-    }
+  diffDiv.style.display = "block";
+  diffDiv.innerHTML = `
+    <strong>Días corridos:</strong> ${diffCorridos}<br>
+    <strong>Días hábiles:</strong> ${habiles}
+  `;
+}
   </script>
 </body>
 </html>
