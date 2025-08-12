@@ -125,6 +125,11 @@ const feriados = [
   "2025-12-25"  // Navidad
 ];
 
+// --- NUEVO: periodo de feria judicial (inhábil) ---
+const inhabilesEspeciales = [
+  { start: "2025-07-14", end: "2025-07-25", motivo: "Feria judicial de julio" }
+];
+
 // --- Utilidades en horario local para evitar desfases por UTC ---
 function parseLocalDate(yyyyMmDd) {
   const [y, m, d] = yyyyMmDd.split("-").map(Number);
@@ -137,10 +142,16 @@ function isoLocal(date) {
   return `${y}-${m}-${d}`;
 }
 
+// --- NUEVO: chequeo de inhábiles por periodos ---
+function esInhabilEspecial(date) {
+  const iso = isoLocal(date);
+  return inhabilesEspeciales.some(({ start, end }) => iso >= start && iso <= end);
+}
+
 function esDiaHabil(date) {
   const day = date.getDay();
   const iso = isoLocal(date);
-  return day !== 0 && day !== 6 && !feriados.includes(iso);
+  return day !== 0 && day !== 6 && !feriados.includes(iso) && !esInhabilEspecial(date);
 }
 
 function calcularFecha() {
